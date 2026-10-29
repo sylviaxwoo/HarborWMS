@@ -476,9 +476,16 @@ export const useWmsStore = create<WmsStore>()(
           const openTasks = state.putawayTasks.filter(
             (t) => t.inboundId === inbound.id && t.id !== taskId && t.status === "OPEN"
           );
-          const allPut = lines.every(
-            (l) => l.putawayQty + l.closedShortQty >= l.receivedQty
+          const allPut = lines.every((l) => l.putawayQty >= l.receivedQty);
+          const fullyClosed = lines.every(
+            (l) => l.receivedQty + l.closedShortQty >= l.expectedQty
           );
+          const nextStatus =
+            allPut && openTasks.length === 0
+              ? fullyClosed
+                ? "COMPLETED"
+                : "RECEIVING"
+              : "PUTTING_AWAY";
 
           set({
             stock: moved.stock,
@@ -491,8 +498,7 @@ export const useWmsStore = create<WmsStore>()(
                 ? {
                     ...i,
                     lines,
-                    status:
-                      allPut && openTasks.length === 0 ? "COMPLETED" : "PUTTING_AWAY",
+                    status: nextStatus,
                     audit: audit(
                       i.audit,
                       "PUTAWAY",
